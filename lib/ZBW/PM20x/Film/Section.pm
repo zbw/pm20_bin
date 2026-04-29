@@ -647,12 +647,15 @@ sub _init_data {
       if ( $section->{$category_prop}
         and my $category_uri = $section->{$category_prop}{'@id'} )
       {
-        my ($category_id) =
-          $category_uri =~ m;category/$category_type/i/(\d{6});;
-        push(
-          @{ $CATEGORY->{$category_type}{$category_id}{$filming} },
-          $section
-        );
+        # skip category id value of "nomatch"
+        if ( my ($category_id) =
+          $category_uri =~ m;category/$category_type/i/(\d{6}); )
+        {
+          push(
+            @{ $CATEGORY->{$category_type}{$category_id}{$filming} },
+            $section
+          );
+        }
       }
 
       next unless $grp_prop_ref->{secondary_group};
