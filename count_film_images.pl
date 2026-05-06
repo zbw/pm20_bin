@@ -8,7 +8,8 @@
 
 use strict;
 use warnings;
-use utf8;
+use autodie;
+use utf8::all;
 
 use Data::Dumper;
 ##use Data::Dumper::Names;
@@ -49,7 +50,8 @@ foreach my $set ( sort keys %conf ) {
     # findbuch input
     my $findbuch_file =
       $filmdata_root->child( $set . '_' . $collection . '.json' );
-    my $findbuch_data = from_json( $findbuch_file->slurp ) || die "not found";
+    my $findbuch_data = decode_json( $findbuch_file->slurp_raw )
+      || die "not found";
 
     my $last_film_id = 0;
     foreach my $entry ( @{$findbuch_data} ) {

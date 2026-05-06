@@ -10,12 +10,10 @@
 
 use strict;
 use warnings;
-use utf8;
-
-use lib './lib';
+use autodie;
+use utf8::all;
 
 use Data::Dumper;
-use Encode;
 use HTML::Entities;
 use HTML::Template;
 use JSON;
@@ -180,13 +178,13 @@ sub load_files {
   my $collection = shift || die "param missing";
 
   $docdata_file    = $DOCDATA_ROOT->child("${collection}_docdata.json");
-  $docdata_ref     = decode_json( $docdata_file->slurp );
+  $docdata_ref     = decode_json( $docdata_file->slurp_raw );
   $imagedata_file  = $IMAGEDATA_ROOT->child("${collection}_image.json");
-  $imagedata_ref   = decode_json( $imagedata_file->slurp );
+  $imagedata_ref   = decode_json( $imagedata_file->slurp_raw );
   $imagesize_file  = $IMAGEDATA_ROOT->child("${collection}_size.json");
-  $imagesize_ref   = decode_json( $imagesize_file->slurp );
+  $imagesize_ref   = decode_json( $imagesize_file->slurp_raw );
   $folderdata_file = $FOLDERDATA_ROOT->child("${collection}_label.json");
-  $folderdata_ref  = decode_json( $folderdata_file->slurp );
+  $folderdata_ref  = decode_json( $folderdata_file->slurp_raw );
 }
 
 sub get_max_image_fn {

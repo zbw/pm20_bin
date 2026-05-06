@@ -15,7 +15,8 @@
 
 use strict;
 use warnings;
-use utf8;
+use autodie;
+use utf8::all;
 
 use Data::Dumper;
 use Path::Tiny;
@@ -25,9 +26,6 @@ use REST::Client;
 ##use URI::file;
 use URL::Encode qw/url_encode/;
 use YAML;
-
-# create utf8 output
-binmode( STDOUT, ":utf8" );
 
 Readonly my $DEFINITIONS_FILE => path('sparql_results.yaml');
 

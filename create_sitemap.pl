@@ -5,10 +5,8 @@
 
 use strict;
 use warnings;
-
+use autodie;
 use utf8;
-
-use lib './lib';
 
 use Data::Dumper;
 use List::MoreUtils qw/uniq/;

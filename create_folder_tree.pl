@@ -11,8 +11,8 @@
 
 use strict;
 use warnings;
-
-use lib './lib';
+use autodie;
+use utf8::all;
 
 use Data::Dumper;
 use JSON;
@@ -116,7 +116,7 @@ sub load_files {
   my $collection = shift || die "param missing";
 
   $imagedata_file = $IMAGEDATA_ROOT->child("${collection}_image.json");
-  $imagedata_ref  = decode_json( $imagedata_file->slurp );
+  $imagedata_ref  = decode_json( $imagedata_file->slurp_raw );
 }
 
 sub usage {

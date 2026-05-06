@@ -9,9 +9,8 @@
 
 use strict;
 use warnings;
-use utf8;
-
-use lib './lib';
+use autodie;
+use utf8::all;
 
 use Data::Dumper;
 use HTML::Template;
@@ -22,7 +21,6 @@ use Unicode::Collate;
 use YAML;
 use ZBW::PM20x::Folder;
 
-binmode( STDOUT, ":utf8" );
 $Data::Dumper::Sortkeys = 1;
 
 Readonly my $FOLDER_DATA    => path('/pm20/data/rdf/pm20.extended.jsonld');
@@ -268,7 +266,7 @@ sub load_ids {
   my $coll_id_ref = shift or die "param missing";
 
   # create a list of numerical keys for each collection
-  my $data = decode_json( $FOLDER_DATA->slurp );
+  my $data = decode_json( $FOLDER_DATA->slurp_raw );
   foreach my $entry ( @{ $data->{'@graph'} } ) {
     $entry->{identifier} =~ m/^(co|pe|sh|wa)\/(\d{6}(?:,\d{6})?)$/;
     push( @{ $coll_id_ref->{$1} }, $2 );

@@ -6,7 +6,8 @@
 
 use strict;
 use warnings;
-use utf8;
+use autodie;
+use utf8::all;
 
 use Data::Dumper;
 use JSON;
@@ -14,8 +15,6 @@ use Path::Tiny;
 use Readonly;
 use YAML::Tiny;
 
-binmode( STDIN,  ":encoding(iso-8859-1)" );
-binmode( STDOUT, ":utf8" );
 $Data::Dumper::Sortkeys = 1;
 
 Readonly my $DOCATTRIB_ROOT => path('/pm20/data/DocAttribute/');

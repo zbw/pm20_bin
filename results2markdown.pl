@@ -9,9 +9,8 @@
 
 use strict;
 use warnings;
-use utf8;
-
-use lib './lib';
+use autodie;
+use utf8::all;
 
 use Data::Dumper;
 use JSON;
@@ -19,8 +18,6 @@ use Path::Tiny;
 use Readonly;
 use YAML;
 use ZBW::PM20x::Folder;
-
-binmode( STDOUT, ":utf8" );
 
 Readonly my $DEFINITIONS_FILE   => 'sparql_results.yaml';
 Readonly my $CONFIGURATION_FILE => 'reports.yaml';
@@ -45,7 +42,7 @@ foreach my $report ( keys %definition ) {
     # read input
     ( my $input_dir = $definition{$report}{output_dir} ) =~ s|/var/|/data/|;
     my $input_file = path("$input_dir/$report.$lang.json");
-    my $input      = decode_json( $input_file->slurp );
+    my $input      = decode_json( $input_file->slurp_raw );
 
     # collect output lines, starting with page head
     my @lines;

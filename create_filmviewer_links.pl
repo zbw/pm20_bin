@@ -8,9 +8,8 @@
 
 use strict;
 use warnings;
-use utf8;
-
-use lib './lib';
+use autodie;
+use utf8::all;
 
 use Data::Dumper;
 use JSON;

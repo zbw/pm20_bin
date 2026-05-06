@@ -5,9 +5,8 @@
 
 use strict;
 use warnings;
-use utf8;
-
-use lib './lib';
+use autodie;
+use utf8::all;
 
 use Data::Dumper;
 use JSON;
@@ -56,7 +55,7 @@ foreach my $collection (qw/ co pe sh wa /) {
 
   # load input file
   my $imagedata_file = $IMAGEDATA_ROOT->child("${collection}_image.json");
-  my $imagedata_ref  = decode_json( $imagedata_file->slurp );
+  my $imagedata_ref  = decode_json( $imagedata_file->slurp_raw );
 
   foreach my $folder_nk ( sort keys %{$imagedata_ref} ) {
     my $folder = ZBW::PM20x::Folder->new( $collection, $folder_nk );
@@ -70,7 +69,7 @@ foreach my $collection (qw/ co pe sh wa /) {
 # categories
 foreach my $vocab (qw/ geo subject /) {
   my $klassdata_file = $KLASSDATA_ROOT->child("${vocab}_by_signature.de.json");
-  my $klassdata_ref  = decode_json( $klassdata_file->slurp );
+  my $klassdata_ref  = decode_json( $klassdata_file->slurp_raw );
   foreach my $entry ( @{ $klassdata_ref->{results}{bindings} } ) {
     my $uri =
       defined $entry->{category}

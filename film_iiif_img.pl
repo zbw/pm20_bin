@@ -8,11 +8,10 @@
 
 use strict;
 use warnings;
-
-use lib './lib';
+use autodie;
+use utf8::all;
 
 use Data::Dumper;
-use Encode;
 use HTML::Entities;
 use HTML::Template;
 use Image::Size;

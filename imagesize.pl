@@ -7,6 +7,8 @@
 
 use strict;
 use warnings;
+use autodie;
+use utf8::all;
 
 use Data::Dumper;
 use Devel::Size qw/ total_size /;

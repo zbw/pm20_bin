@@ -10,12 +10,10 @@
 
 use strict;
 use warnings;
-use utf8;
-
-use lib './lib';
+use autodie;
+use utf8::all;
 
 use Data::Dumper;
-use Encode;
 use HTML::Template;
 use JSON;
 use Path::Tiny;
@@ -400,6 +398,7 @@ sub mk_folder {
         }
       }
     }
+
     # film sections, do not exist for persons
     if ( $collection eq 'co' ) {
       my $company_id = "co/$folder_nk";
@@ -433,15 +432,21 @@ sub mk_folder {
 
         my @filmsection_loop;
         foreach my $section ( sort @filmsectionlist ) {
-          my $film_id = substr( $section->{'@id'}, 25 );
-          my $entry   = {
+          my $section_id = substr( $section->{'@id'}, 25 );
+          my $entry      = {
             "is_$lang"     => 1,
-            filmviewer_url => "https://pm20.zbw.eu/film/$film_id",
-            film_id        => $film_id,
-            first_img      => $section->{title},
+            filmviewer_url => "https://pm20.zbw.eu/film/$section_id",
+            section_id     => $section_id,
+            section_label  => $section->{title},
           };
           push( @filmsection_loop, $entry );
         }
+
+        # sort entries by location
+        my $uc = Unicode::Collate->new();
+        @filmsection_loop =
+          sort { $uc->cmp( $a->{'section_id'}, $b->{'section_id'} ) }
+          @filmsection_loop;
 
         my %filming_data = (
           "is_$lang"             => 1,
@@ -491,7 +496,7 @@ sub load_ids {
   my $folder_id = shift;
 
   # create a list of numerical keys for each collection
-  my $data = decode_json( $FOLDER_DATA->slurp );
+  my $data = decode_json( $FOLDER_DATA->slurp_raw );
   foreach my $entry ( @{ $data->{'@graph'} } ) {
     $entry->{identifier} =~ m/^(co|pe|sh|wa)\/(\d{6}(?:,\d{6})?)$/;
     push( @{ $coll_id->{$1} }, $2 );
@@ -793,8 +798,7 @@ sub add_schema_jsonld {
     '@graph'   => [$schema_data_ref],
   };
 
-  # will be utf8-encoded later in template
-  return decode( 'UTF-8', encode_json($schema_ld) );
+  return $schema_ld;
 }
 
 sub add_jsonld {
@@ -805,8 +809,7 @@ sub add_jsonld {
     '@graph'   => [$folderdata_raw],
   };
 
-  # will be utf8-encoded later in template
-  return decode( 'UTF-8', encode_json($ld) );
+  return $ld;
 }
 
 sub get_wd_uri {

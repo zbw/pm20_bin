@@ -16,16 +16,14 @@
 
 use strict;
 use warnings;
-use utf8;
-use lib './lib';
+use autodie;
+use utf8::all;
 
 use Data::Dumper;
 use JSON;
 use Path::Tiny;
 use YAML::Tiny;
 use ZBW::PM20x::Vocab;
-
-binmode( STDOUT, ":utf8" );
 
 my $film_root      = path('/pm20/film/');
 my $pub_film_root  = path('/pm20/web/film/');

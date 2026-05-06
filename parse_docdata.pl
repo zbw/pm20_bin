@@ -15,9 +15,8 @@
 
 use strict;
 use warnings;
-use utf8;
-
-use lib './lib';
+use autodie;
+use utf8::all;
 
 use Data::Dumper;
 use JSON;
@@ -25,8 +24,6 @@ use Log::Log4perl::Level;
 use Path::Tiny;
 use Readonly;
 use ZBW::Logutil;
-
-binmode( STDOUT, ":utf8" );
 
 # logging
 my $log = ZBW::Logutil->get_logger('./log_conf/parse_docdata.conf');
@@ -56,11 +53,13 @@ foreach my $collection (@COLLECTIONS) {
 
   # read image data file
   my $img_ref =
-    decode_json( $IMAGEDATA_ROOT->child("${collection}_image.json")->slurp );
+    decode_json(
+    $IMAGEDATA_ROOT->child("${collection}_image.json")->slurp_raw );
 
   # read doc attribute data file
   my $docattr_ref =
-    decode_json( $DOCDATA_ROOT->child("${collection}_docattr.json")->slurp );
+    decode_json(
+    $DOCDATA_ROOT->child("${collection}_docattr.json")->slurp_raw );
 
   my %docdata;
   foreach my $folder ( sort keys %{$img_ref} ) {
@@ -102,7 +101,7 @@ foreach my $collection (@COLLECTIONS) {
       # consolidated document information
       my $field_ref =
         consolidate_info( $folder, $doc, $docdata{$folder}{info}{$doc},
-          $docs{$doc} );
+        $docs{$doc} );
       $docdata{$folder}{info}{$doc}{con} = $field_ref;
 
       ##if ($docdata{$folder}{info}{$doc}{_txt}{TIT}) {

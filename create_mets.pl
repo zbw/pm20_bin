@@ -13,12 +13,10 @@
 
 use strict;
 use warnings;
-use utf8;
-
-use lib './lib';
+use autodie;
+use utf8::all;
 
 use Data::Dumper;
-use Encode;
 use HTML::Entities qw(encode_entities_numeric);
 use HTML::Template;
 use JSON;
@@ -151,7 +149,7 @@ sub mk_folder {
 sub load_files {
   my $collection = shift || die "param missing";
   $imagedata_file = $IMAGEDATA_ROOT->child("${collection}_image.json");
-  $imagedata_ref  = decode_json( $imagedata_file->slurp );
+  $imagedata_ref  = decode_json( $imagedata_file->slurp_raw );
 }
 
 sub build_file_grp {

@@ -4,7 +4,8 @@ package ZBW::PM20x::Vocab;
 
 use strict;
 use warnings;
-use utf8;
+use autodie;
+use utf8::all;
 
 use Carp qw/ cluck confess croak /;
 use Data::Dumper;
@@ -14,7 +15,7 @@ use Path::Tiny;
 use Readonly;
 use Scalar::Util qw(looks_like_number reftype);
 use Unicode::Collate;
-use ZBW::PM20x::Film;
+use ZBW::PM20x::Film::Section;
 
 # exported package constants
 our @ISA    = qw/ Exporter /;
@@ -115,8 +116,11 @@ sub new {
   my ( %cat, %lookup, $modified );
   my $file = path("$RDF_ROOT/$vocab_name.skos.extended.jsonld");
   foreach my $lang (qw/ en de /) {
+
+    # opening _raw is necessary to avoid "Wide character ..." problem with
+    # decode_json (slurp_utf8 does not work!)
     my @categories =
-      @{ decode_json( $file->slurp )->{'@graph'} };
+      @{ decode_json( $file->slurp_raw )->{'@graph'} };
 
     # read jsonld graph
     foreach my $category (@categories) {
@@ -304,6 +308,18 @@ sub lookup_ware_name {
   return $term_id;
 }
 
+=item vocab_name ()
+
+Return the name of the vocabulary.
+
+=cut
+
+sub vocab_name {
+  my $self = shift or confess('param missing');
+
+  return $self->{vocab_name};
+}
+
 =back
 
 =head2 Methods for an individual term/category
@@ -356,7 +372,7 @@ sub category_uri {
   my $self    = shift or croak('param missing');
   my $term_id = shift or croak('param missing');
 
-  my $uri = $URI_STUB . $self->{vocab_name} . "/i/$term_id";
+  my $uri = $URI_STUB . $self->vocab_name . "/i/$term_id";
 
   return $uri;
 }
@@ -525,16 +541,17 @@ sub folder_count {
   my $detail_type = shift or croak('param missing');
 
   # get from extended vocab data
-  my $category_type = $self->{vocab_name};
+  my $category_type = $self->vocab_name;
   my $prop          = $COUNT_PROPERTY{$category_type}{$detail_type};
   my $folder_count  = $self->{id}{$term_id}{$prop}{'@value'};
 
   return $folder_count;
 }
 
-=item folderlist ( $lang, $term_id, $detail_type )
+=item folderlist ( $lang, $term_id, $detail_vocab )
 
-Returns a list of folders, sorted by long signature or ware name of the detail type.
+Returns a list of folders, sorted by long signature or ware name of the detail
+vocabulary.
 
 =cut
 
@@ -546,8 +563,8 @@ sub folderlist {
 
   my @folderlist;
 
-  my $master_type = $self->{vocab_name};
-  my $detail_type = $detail_voc->{vocab_name};
+  my $master_type = $self->vocab_name;
+  my $detail_type = $detail_voc->vocab_name;
 
   my @detail_category_ids = $detail_voc->category_ids($lang);
   foreach my $detail_id (@detail_category_ids) {
@@ -568,7 +585,12 @@ sub folderlist {
       croak("Strange combination of master $master_type $term_id "
           . "and detail $detail_id" );
     }
+
+    # create a folder from  hypotetical combination of terms
     my $folder = ZBW::PM20x::Folder->new( $collection, $folder_nk );
+
+    # filters for actually existing folders
+    # (film sections cannot interfere here)
     if ( $folder->get_doc_count ) {
       push( @folderlist, $folder );
     }
@@ -612,25 +634,54 @@ sub start_sig {
   }
 }
 
-=item filmsectionlist( $term_id, $filming )
+=item filmsectionlist( $term_id, $filming, $detail_type )
 
-Return a sorted list of film sections for a category (leaves out sections
-already published as folders and not manually indexed) for either filming 1 or
-2. Currently datastructure works only for primary category. For category geo,
-only sections for sh are returned.
+Return a (currently unsorted) list of film sections of detail category type $detail_type
+(defaults see below) for a term of the given (main) category type for either
+filming 1 or 2. Leaves out sections already published as folders and not
+manually indexed.
 
-TODO: Extend to secondary categories.
+Default detail types are subject for geo, geo for ware, or geo for subject.
 
 =cut
 
 sub filmsectionlist {
-  my $self    = shift or croak('param missing');
-  my $term_id = shift or croak('param missing');
-  my $filming = shift or croak('param missing');
+  my $self        = shift or croak('param missing');
+  my $term_id     = shift or croak('param missing');
+  my $filming     = shift or croak('param missing');
+  my $detail_type = shift;
 
-  my @filmsectionlist =
-    ZBW::PM20x::Film->categorysections( $self->{vocab_name}, $term_id,
-    $filming );
+  my $master_type = $self->vocab_name;
+
+  # set default detail type, if omitted by the caller
+  if ( not $detail_type ) {
+    if ( $master_type eq 'ware' ) {
+      $detail_type = 'geo';
+    } elsif ( $master_type eq 'geo' ) {
+      $detail_type = 'subject';
+    } elsif ( $master_type eq 'subject' ) {
+      $detail_type = 'geo';
+    }
+  }
+
+  my @filmsectionlist;
+
+  # only certain combinations of master/detail categories are valid!
+  if ( ( $master_type eq 'geo' and $detail_type eq 'subject' )
+    or ( $master_type eq 'ware' and $detail_type eq 'geo' ) )
+  {
+    @filmsectionlist =
+      ZBW::PM20x::Film::Section->categorysections( $master_type, $term_id,
+      $filming );
+  } elsif ( $master_type eq 'geo' and $detail_type eq 'ware'
+    or $master_type eq 'subject' and $detail_type eq 'geo' )
+  {
+    @filmsectionlist =
+      ZBW::PM20x::Film::Section->categorysections_inv( $master_type, $term_id,
+      $filming );
+  } else {
+    croak("Invalid combination of master $master_type and detail $detail_type");
+  }
 
   return @filmsectionlist;
 }
@@ -704,7 +755,7 @@ sub _as_array {
 sub _add_subheadings {
   my $self = shift or croak('param missing');
 
-  if ( $self->{vocab_name} eq 'geo' ) {
+  if ( $self->vocab_name eq 'geo' ) {
     $self->{subhead} = {
       A => {
         de => 'Europa',
@@ -747,7 +798,7 @@ sub _add_subheadings {
         en => 'Tropics',
       },
     };
-  } elsif ( $self->{vocab_name} eq 'subject' ) {
+  } elsif ( $self->vocab_name eq 'subject' ) {
     foreach my $id ( keys %{ $self->{id} } ) {
       my %terminfo  = %{ $self->{id}{$id} };
       my $signature = $terminfo{notation};
@@ -762,7 +813,7 @@ sub _add_subheadings {
         $self->{subhead}{$signature}{$lang} = $label;
       }
     }
-  } elsif ( $self->{vocab_name} eq 'ware' ) {
+  } elsif ( $self->vocab_name eq 'ware' ) {
 
     # here we have no signature, but only start chars
     foreach my $id ( keys %{ $self->{id} } ) {
@@ -806,7 +857,7 @@ sub _init_ware_name {
   }
 }
 
-# init the sorted id lists
+# init the sorted id lists (returns hash of arrays, keyed by language)
 
 sub _init_sorted_ids {
   my $self = shift or croak('param missing');
@@ -815,7 +866,7 @@ sub _init_sorted_ids {
   my %cat_id = %{ $self->{id} };
   foreach my $lang (@LANGUAGES) {
     my @category_ids;
-    if ( $self->{vocab_name} eq 'ware' ) {
+    if ( $self->vocab_name eq 'ware' ) {
       my $uc = Unicode::Collate->new();
       @category_ids = sort {
         $uc->cmp( $cat_id{$a}{'prefLabel'}{$lang},

@@ -17,25 +17,27 @@ Scope Note: <tmpl_var scope_note><tmpl_if is_en></tmpl_if>
 </div></tmpl_if></tmpl_if>
 
 <tmpl_if show_tabs>
-<tmpl_if is_de>[Sacharchiv](#sacharchiv-mappen) &#160; [Warenarchiv](#warenarchiv-mappen)</tmpl_if>
-<tmpl_if is_en>[Subject archives](#subject-archives-folders) &#160; [Commodities/wares archives](#commoditieswares-archives-folders)</tmpl_if>
+<tmpl_if is_de>[Sacharchiv](#sacharchiv) &#160; [Warenarchiv](#warenarchiv)</tmpl_if>
+<tmpl_if is_en>[Subject archives](#subject-archives) &#160; [Commodities/wares archives](#commoditieswares-archives)</tmpl_if>
 </tmpl_if>
 
 <tmpl_loop detail_type_loop>
 
 ## <tmpl_var detail_title>
 
+### <tmpl_if is_de>Mappen</tmpl_if><tmpl_if is_en>Folders</tmpl_if>
+
 <tmpl_if detail_is_geo>
 
 <tmpl_if lines>
 
 <tmpl_if is_de>
-Insgesamt <tmpl_var folder_count1> Mappen, <tmpl_var document_count1> Dokumente - Mappen <tmpl_if complete>bis 1949 komplett<tmpl_else>unvollständig. Weiteres Material auf digitalisiertem Mikrofilm [siehe unten](#filmsections)</tmpl_if>.
+Insgesamt <tmpl_var folder_count1> Mappen, <tmpl_var document_count1> Dokumente - Mappen <tmpl_if complete>bis 1949 komplett<tmpl_else>unvollständig. Weiteres Material auf digitalisiertem Mikrofilm [siehe unten](#geo_filmsections)</tmpl_if>.
 <tmpl_if folder_count1>
 _Klicken Sie "(xy Dokumente)" für die Dokumentanzeige im Viewer und "(Mappe)" für Mappeninformation._</tmpl_if>
 </tmpl_if>
 <tmpl_if is_en>
-In total <tmpl_var folder_count1> folders, <tmpl_var document_count1> documents - folders <tmpl_if complete>complete until 1949<tmpl_else>incomplete. Further material on digitized microfilm [see below](#filmsections)</tmpl_if>.
+In total <tmpl_var folder_count1> folders, <tmpl_var document_count1> documents - folders <tmpl_if complete>complete until 1949<tmpl_else>incomplete. For further material on digitized microfilm [see below](#geo_filmsections)</tmpl_if>.
 <tmpl_if folder_count1>
 _For direct access to the documents, click the "(xy documents)" link, for folder information use the "(folder)" link._</tmpl_if>
 </tmpl_if>
@@ -59,7 +61,7 @@ _For direct access to the documents, click the "(xy documents)" link, for folder
 
 <tmpl_if is_de>
 Insgesamt <tmpl_var folder_count1> Mappen, <tmpl_var document_count1> Dokumente - Mappen <tmpl_if complete>bis 1949 komplett<tmpl_else>unvollständig.
-Nicht als Mappe aufbereitetes Material finden Sie unter [digitalisierte Microfilme](/film/h1_sh.de.html)</tmpl_if>.
+Nicht als Mappe aufbereitetes Material finden Sie unter [digitalisierte Mikrofilme](/film/h1_sh.de.html)</tmpl_if>.
 
 _Klicken Sie "(xy Dokumente)" für die Dokumentanzeige im Viewer und "(Mappe)" für Mappeninformation._
 </tmpl_if>
@@ -85,6 +87,8 @@ _For direct access to the documents, click the "(xy documents)" link, for folder
 
 <tmpl_if detail_is_ware>
 
+<tmpl_if lines>
+
 <tmpl_if is_de>
 Insgesamt <tmpl_var folder_count1> Mappen (bis 1949), <tmpl_var document_count1> Dokumente
 - Mappen unvollständig.  Nicht als Mappe aufbereitetes Material finden Sie
@@ -94,16 +98,23 @@ und der [2. Verfilmung](/film/h2_wa.de.html).
 _Klicken Sie "(xy Dokumente)" für die Dokumentanzeige im Viewer und "(Mappe)" für Mappeninformation._
 </tmpl_if>
 <tmpl_if is_en>
-In total <tmpl_var folder_count1> folders (until 1949), <tmpl_var document_count1> documents
-- folders incomplete.  For material not published as folders, please check the
-digitized micro-films of the [1st filming](/film/h1_wa.de.html) and [2nd
-filming](/film/h2_wa.de.html) (in German).
+In total <tmpl_var folder_count1> folders (until 1949), <tmpl_var
+document_count1> documents - folders incomplete. For further material on
+digitized microfilm [see below](#ware_filmsections).
 
 _For direct access to the documents, click the "(xy documents)" link, for folder information use the "(folder)" link._
 </tmpl_if>
 
 <tmpl_var lines>
 
-</tmpl_if detail_is_subject>
+<tmpl_else>
+
+<tmpl_if is_de>Kein als Mappe erschlossenes Material.</tmpl_if><tmpl_if is_en>No material prepared as folder.</tmpl_if>
+
+</tmpl_if lines>
+
+<tmpl_include name="filmsections.md.inc">
+
+</tmpl_if detail_is_ware>
 
 </tmpl_loop detail_type_loop>

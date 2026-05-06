@@ -13,9 +13,8 @@
 
 use strict;
 use warnings;
-use utf8;
-
-use lib './lib';
+use autodie;
+use utf8::all;
 
 use Carp;
 use Data::Dumper;
@@ -29,8 +28,6 @@ use Unicode::Collate;
 use YAML;
 use ZBW::PM20x::Folder;
 use ZBW::PM20x::Vocab;
-
-binmode( STDOUT, ":encoding(UTF-8)" );
 
 ##Readonly my $WEB_ROOT        => path('/tmp/category');
 Readonly my $WEB_ROOT        => path('../web/category');
@@ -162,8 +159,11 @@ foreach my $category_type ( sort keys %{$definitions_ref} ) {
 
         my %filmsections;
         foreach my $filming (qw/ 1 2/) {
-          $filmsections{$filming} =
-            [ $master_voc->filmsectionlist( $category_id, $filming ) ];
+          $filmsections{$filming} = [
+            $master_voc->filmsectionlist(
+              $category_id, $filming, $detail_type
+            )
+          ];
         }
 
         my $folder_count =
@@ -184,7 +184,8 @@ foreach my $category_type ( sort keys %{$definitions_ref} ) {
               $category_type eq 'ware'
             ? $firstletter
             : $master_voc->subheading( $lang, $firstletter );
-          push( @lines, '', "### $subhead <a name='id_$firstletter'></a>", '' );
+          push( @lines, '', "#### $subhead <a name='id_$firstletter'></a>",
+            '' );
           push( @tabs, { startchar => $firstletter } );
           $firstletter_old = $firstletter;
         }
@@ -255,7 +256,12 @@ foreach my $category_type ( sort keys %{$definitions_ref} ) {
           ( $master_voc->geo_category_type($category_id) )
           ? $master_voc->geo_category_type($category_id) . ' '
           : ''
-        ) . "[($entry_body)]{.hint}";
+        );
+
+        # don't output completely empty notes as "()"
+        if ($entry_body) {
+          $entry_note .= "[($entry_body)]{.hint}";
+        }
 
         # main entry
         my $siglink = $master_voc->siglink($category_id)
@@ -316,6 +322,19 @@ foreach my $category_type ( sort keys %{$definitions_ref} ) {
 # individual category pages
 #
 ###########################
+
+# data structure %category_data:
+
+#   category_type
+#     category_id       # defines page
+#       detail_type
+#         folder
+#           lines
+#             de|en
+#         filming_loop
+#           de|en
+#             filming
+#               filmsection_loop
 
 my %category_data;
 
@@ -460,7 +479,7 @@ foreach my $category_type ( sort keys %{$definitions_ref} ) {
           # prepend subheading
           my $subheading =
             $detail_voc->subheading( $lang, $firstletter ) || $firstletter;
-          $text .= "\n\n### $subheading\n\n";
+          $text .= "\n\n#### $subheading\n\n";
 
           # all text line for this subheading
           $text .= join( "\n", @{ $lines_ref->{$firstletter} } );
@@ -479,12 +498,13 @@ foreach my $category_type ( sort keys %{$definitions_ref} ) {
 
 print "\n\nCollect data for film sections\n";
 
-# only top level for the country-subject and ware archives
-foreach my $category_type (qw/ geo ware /) {
+# now for all top level pages
+foreach my $category_type (qw/ geo subject ware /) {
   print "\nfilm sections category_type: $category_type\n";
 
   # master vocabulary reference
   $master_voc = ZBW::PM20x::Vocab->new($category_type);
+  my $master_type = $master_voc->vocab_name;
 
   foreach my $lang (@LANGUAGES) {
     print "  lang: $lang\n";
@@ -493,9 +513,9 @@ foreach my $category_type (qw/ geo ware /) {
     my @detail_types =
       sort keys %{ $definitions_ref->{$category_type}{detail} };
     foreach my $detail_type (@detail_types) {
-      next if $category_type eq 'geo' and $detail_type eq 'ware';
 
       print "    detail_type: $detail_type\n";
+      my $detail_voc = ZBW::PM20x::Vocab->new($detail_type);
       my $def_ref = $definitions_ref->{$category_type}->{detail}{$detail_type};
       my $detail_title = $def_ref->{title}{$lang};
 
@@ -507,10 +527,13 @@ foreach my $category_type (qw/ geo ware /) {
         foreach my $filming (qw/ 1 2 /) {
           my $filming_ref = $filming_def_ref->{$filming};
 
+          # filmsections for the master / detail combination (works in either
+          # normal or inversed hierarchical order)
           my @filmsectionlist =
-            $master_voc->filmsectionlist( $category_id, $filming );
+            $master_voc->filmsectionlist( $category_id, $filming,
+            $detail_type );
 
-          # how to deal deal wth mission information depends ...
+          # how to deal deal with missing information depends ...
           if ( not scalar(@filmsectionlist) > 0 ) {
             if (  $filming eq '1'
               and $category_data{$category_type}{$category_id}{$detail_type}
@@ -518,6 +541,7 @@ foreach my $category_type (qw/ geo ware /) {
             {
               ## is ok
             } else {
+              ## in which cases should a warning be issued?
               ## warn "no film data for $category_id in filming $filming\n";
             }
             next;
@@ -525,25 +549,51 @@ foreach my $category_type (qw/ geo ware /) {
 
           my @filmsection_loop;
           foreach my $section (@filmsectionlist) {
-            ## TODO is this correct? includes position and R/L!
-            my $film_id = substr( $section->{'@id'}, 25 );
-            my $entry   = {
+            my $section_id = substr( $section->{'@id'}, 25 );
+
+            my $section_label =
+              $section->label( $lang, $detail_voc ) || $section->{title};
+
+            my $entry = {
               "is_$lang"     => 1,
               filmviewer_url => $section->{'@id'},
-              film_id        => $film_id,
-              first_img      => $section->{title},
+              section_id     => $section_id,
+              section_label  => $section_label,
+              image_count    => $section->img_count,
             };
+            if ( $section->is_filmstartonly ) {
+              $entry->{is_filmstartonly} = 1;
+            }
             push( @filmsection_loop, $entry );
           }
 
+          # sort ware entries alphabetically
+          if ( $detail_type eq 'ware' ) {
+            my $uc = Unicode::Collate->new();
+            @filmsection_loop =
+              sort { $uc->cmp( $a->{'section_label'}, $b->{'section_label'} ) }
+              @filmsection_loop;
+          }
+
+          my $total_number_of_images =
+            $master_voc->film_img_count( $category_id, $filming );
+
           my %filming_data = (
             "is_$lang"             => 1,
+            detail_title           => $detail_title,
             filming_title          => $filming_ref->{title}{$lang},
             legal                  => $filming_ref->{legal}{$lang},
             filmsection_loop       => \@filmsection_loop,
-            total_number_of_images =>
-              $master_voc->film_img_count( $category_id, $filming ),
+            total_number_of_images => $total_number_of_images,
           );
+
+          # remove image count for ware section on geo pages
+          # or geo sections on subject pages
+          if ( ( $master_type eq 'geo' and $detail_type eq 'ware' )
+            or ( $master_type eq 'subject' and $detail_type eq 'geo' ) )
+          {
+            delete $filming_data{total_number_of_images};
+          }
 
           push( @filmings, \%filming_data );
         }    # $filming
@@ -552,12 +602,26 @@ foreach my $category_type (qw/ geo ware /) {
           $category_data{$category_type}{$category_id}{$detail_type}
             {filming_loop}{$lang} = \@filmings;
         }
+
+        # add data for special text about secondary categories
+        if ( is_secondary_category( $master_type, $detail_type ) ) {
+          my $collection = $detail_type eq 'ware' ? 'wa' : 'sh';
+          my %suppl      = (
+            detail_title => $detail_title,
+            ordered_by   => $def_ref->{ordered_by}{$lang},
+            filmlist1    => "/film/h1_$collection.de.html",
+            filmlist2    => "/film/h2_$collection.de.html",
+          );
+          $category_data{$category_type}{$category_id}{$detail_type}
+            {secondary_category}{$lang} = \%suppl;
+        }    # secondary_category
       }    # $category_id
     }    # $detail_type
   }    # $lang
 }
 
 ###print "\n## size inc. film: ", total_size(\%category_data) / (1024*1024), "\n";
+###path('/tmp/category.dat')->spew(Dumper \%category_data); exit;
 
 print "\n\nOutput of individual category pages\n\n";
 
@@ -569,6 +633,7 @@ foreach my $lang (@LANGUAGES) {
 
     # master vocabulary reference
     $master_voc = ZBW::PM20x::Vocab->new($category_type);
+    my $master_type = $master_voc->vocab_name;
 
     foreach my $category_id ( sort keys %{ $category_data{$category_type} } ) {
 
@@ -593,8 +658,19 @@ foreach my $lang (@LANGUAGES) {
         if ( defined $filming_loop_ref ) {
           $data{filming_loop} = $filming_loop_ref;
         }
-        push( @detail_data, \%data );
 
+        # supplemental data for secondary category
+        ## TODO fix ugly construct
+        if ( is_secondary_category( $master_type, $detail_type ) ) {
+          $data{is_secondary_category} = 1;
+          foreach
+            my $key (qw[ ordered_by detail_title filmlist1 filmlist2 ])
+          {
+            $data{$key} =
+              $category_ref->{$detail_type}{secondary_category}{$lang}{$key};
+          }
+        }
+        push( @detail_data, \%data );
       }    # $detail_type
 
       # actual output
@@ -617,6 +693,7 @@ sub output_category_page {
     $PROV{ $definitions_ref->{$category_type}{prov} }{name}{$lang};
   my $signature = $master_voc->signature($id);
   my $label     = $master_voc->label( $lang, $id );
+  $label =~ s/"/\\"/g;
   my $backlinktitle =
     $lang eq 'en'
     ? 'Category Overview'
@@ -757,3 +834,15 @@ sub get_filmlist_link {
   return $filmlist_link;
 }
 
+sub is_secondary_category {
+  my $master_type = shift or croak('param missing');
+  my $detail_type = shift or croak('param missing');
+
+  if ( ( $master_type eq 'geo' and $detail_type eq 'ware' )
+    or ( $master_type eq 'subject' and $detail_type eq 'geo' ) )
+  {
+    return 1;
+  } else {
+    return;
+  }
+}

@@ -5,7 +5,8 @@
 
 use strict;
 use warnings;
-use utf8;
+use autodie;
+use utf8::all;
 
 use Data::Dumper;
 use JSON;
@@ -17,7 +18,7 @@ my $film_web_root = path('../web/film');
 my $filmdata_root = path('../data/filmdata');
 my $img_file      = $filmdata_root->child('img_count.json');
 my $ip_hints =
-  path('../web/templates/fragments/ip_hints.de.md.frag')->slurp_utf8;
+  path('../web/templates/fragments/ip_hints.de.md.frag')->slurp;
 
 my %page = (
   h => {
@@ -72,7 +73,7 @@ my %page = (
 );
 
 # TEMPORARY: remove path
-my $img_count = decode_json( $img_file->slurp );
+my $img_count = decode_json( $img_file->slurp_raw );
 my %img_cnt;
 foreach my $key ( keys %{$img_count} ) {
   my $shortkey = substr( $key, 18 );
@@ -90,7 +91,7 @@ foreach my $prov ( keys %page ) {
     my $zotero_file = $filmdata_root->child("zotero.$page_name.json");
     my %zotero_film;
     if ( -f $zotero_file ) {
-      %zotero_film = %{ decode_json( $zotero_file->slurp ) };
+      %zotero_film = %{ decode_json( $zotero_file->slurp_raw ) };
     }
 
     # some header information for the page
@@ -119,7 +120,7 @@ foreach my $prov ( keys %page ) {
       $filmfile = $filmdata_root->child( $page_name . '.json' );
     }
     my @film_sections =
-      @{ decode_json( $filmfile->slurp ) };
+      @{ decode_json( $filmfile->slurp_raw ) };
 
     # iterate through the list of film sections (from the excel file)
     foreach my $film_section (@film_sections) {

@@ -8,11 +8,10 @@
 
 use strict;
 use warnings;
-
-use lib './lib';
+use autodie;
+use utf8::all;
 
 use Data::Dumper;
-use Encode;
 use HTML::Entities;
 use HTML::Template;
 use Image::Thumbnail;
@@ -150,9 +149,9 @@ sub load_files {
   my $collection = shift || die "param missing";
 
   $imagedata_file = $IMAGEDATA_ROOT->child("${collection}_image.json");
-  $imagedata_ref  = decode_json( $imagedata_file->slurp );
+  $imagedata_ref  = decode_json( $imagedata_file->slurp_raw );
   $imagesize_file = $IMAGEDATA_ROOT->child("${collection}_size.json");
-  $imagesize_ref  = decode_json( $imagesize_file->slurp );
+  $imagesize_ref  = decode_json( $imagesize_file->slurp_raw );
 }
 
 sub get_max_image_fn {

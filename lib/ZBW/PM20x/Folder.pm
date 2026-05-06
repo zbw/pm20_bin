@@ -4,9 +4,8 @@ package ZBW::PM20x::Folder;
 
 use strict;
 use warnings;
-
-use lib './lib/';
-use utf8;
+use autodie;
+use utf8::all;
 
 use Carp;
 use Data::Dumper;
@@ -17,6 +16,7 @@ use Readonly;
 use Scalar::Util qw(looks_like_number reftype);
 use ZBW::PM20x::Vocab;
 use ZBW::PM20x::Film;
+use ZBW::PM20x::Film::Section;
 
 Readonly my $FOLDER_URI_ROOT  => 'https://pm20.zbw.eu/folder/';
 Readonly our $FOLDER_ROOT     => path('/pm20/folder');
@@ -710,7 +710,7 @@ sub get_filmsectionlist {
   my $filming = shift or croak('param missing');
 
   my @filmsectionlist =
-    ZBW::PM20x::Film->foldersections( $self->get_folder_id, $filming );
+    ZBW::PM20x::Film::Section->foldersections( $self->get_folder_id, $filming );
 
   return @filmsectionlist;
 }
@@ -760,7 +760,7 @@ sub _load_docdata {
   my $collection = shift or croak('param missing');
 
   my $docdata_file = $DOCDATA_ROOT->child("${collection}_docdata.json");
-  my $docdata_ref  = decode_json( $docdata_file->slurp );
+  my $docdata_ref  = decode_json( $docdata_file->slurp_raw );
   $data{$collection}{docdata} = $docdata_ref;
 }
 
